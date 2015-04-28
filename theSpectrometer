@@ -1,0 +1,144 @@
+//Spectrometer_LED
+
+int inPinRed = 7; // red button
+int inPinBlack = 6; // black button
+int redState; 
+int blackState;
+int val = 0; 
+int analogPin = 1;
+int sensorValue = 0; // ADC value of photodiode
+int red = 11;
+int yellow = 10;
+int ir = 12;
+int blue = 8;
+int green = 9;
+int pinArray[] = {12, 11, 10, 9, 8}; // pin address array
+int count = 0;
+int sampleValue[5]; // sample array value
+
+int trialNumber;
+int objectNumber;
+String objectName;
+String sensorName;
+int learnedValue[10][5];
+
+void setup() {
+  Serial.begin(19200);
+  pinMode(inPinRed, INPUT);
+  pinMode(inPinBlack, INPUT);
+  pinMode(red, OUTPUT);
+  pinMode(yellow, OUTPUT);
+  pinMode(ir, OUTPUT);
+  pinMode(blue, OUTPUT);
+  pinMode(green, OUTPUT);
+  for (count=0;count<5;count++)
+    pinMode(pinArray[count], OUTPUT);
+}
+
+
+void loop() {
+  delay(50);
+  for (;;) {
+    redState = digitalRead(inPinRed); //IDENTIFY MODE
+    blackState = digitalRead(inPinBlack); //LEARN MODE
+    if (redState == HIGH) {//red button pressed
+      goto Identify; //jump to identiy subroutine
+    }
+    if (blackState == HIGH) { //black button pressed
+      goto Learn; //jump to learn subroutine
+    }
+  }
+        
+  Learn: 
+  //learn subroutine
+  Serial.print('\n');
+  Serial.print('\n');
+  Serial.print("========== Learn Mode ==========");
+  Serial.print('\n');
+  //Serial.println("Sensor Name: ");
+  //while (Serial.available()==0) {
+  //}  
+  //sensorName = Serial.readString();
+  Serial.println("Object Type: ");
+  while (Serial.available()==0){
+  }
+  objectName = Serial.readString();
+  
+  
+  
+  for (trialNumber=0;trialNumber<10;trialNumber++) {   //trials 0 to 9
+    for (count=0;count<5;count++) {
+      digitalWrite(pinArray[count], HIGH); //turn the LEDs on sequentially
+      delay(25); //wait for stabilization
+      sensorValue = analogRead(analogPin); //read the value from the sensor
+      learnedValue[trialNumber][count] = sensorValue;
+      delay(20);
+      digitalWrite(pinArray[count], LOW); //turn LED off
+      delay(100);
+     }
+  } 
+    Serial.print('\n');
+    Serial.print(objectName);
+    Serial.print(sensorName);
+    
+    for (trialNumber=0;trialNumber<10;trialNumber++) {
+      Serial.print('\n');
+      for (count=0;count<5;count++) {
+    Serial.print(learnedValue[trialNumber][count]);
+    Serial.print(" ");
+    } }
+    
+    
+  for (;;) {
+      redState = digitalRead(inPinRed);
+      blackState = digitalRead(inPinBlack);
+        if (redState == HIGH) {
+          goto Identify; }
+        if (blackState == HIGH) {
+          goto Learn; }
+    }
+  
+  Identify: 
+  // identify subroutine
+  
+  Serial.print("========== Identify Mode ==========");
+  delay(500);
+ 
+  for (count=0;count<5;count++) { //load the matrix with 5 color values
+    digitalWrite(pinArray[count], HIGH); //turn on LED
+    delay(100); //wait for LED to stabalize
+    sensorValue = analogRead(analogPin);
+    sampleValue[count] = sensorValue; //store value in matrix
+    digitalWrite(pinArray[count], LOW); //turn off LED
+  }
+
+  double smallestDistance = 1000000.0;
+  int smallestIndex = -1;
+  for (count = 0; count < 10; count++) {  // Number of learned objects
+    int dim0 = sampleValue[0] - learnedValue[count][0];
+    int dim1 = sampleValue[1] - learnedValue[count][1];
+    int dim2 = sampleValue[2] - learnedValue[count][2];
+    int dim3 = sampleValue[3] - learnedValue[count][3];
+    int dim4 = sampleValue[4] - learnedValue[count][4];
+    int distSq = dim0 * dim0 + dim1 * dim1 + dim2 * dim2 + dim3 * dim3 + dim4 * dim4;
+    double result = sqrt((double)distSq);
+    if (result < smallestDistance) {
+      smallestDistance = result;
+      smallestIndex = count;
+    }
+  }
+  Serial.print("Identified as object ");
+  Serial.println(smallestIndex);
+  
+  
+  for (;;) {
+    redState = digitalRead(inPinRed);
+    blackState = digitalRead(inPinBlack);
+    if (redState == HIGH) {
+      goto Identify;
+    }
+    if (blackState == HIGH) {
+      goto Learn;
+    }
+  }
+}
