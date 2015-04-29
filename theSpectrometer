@@ -1,7 +1,7 @@
 //Spectrometer_LED
 
-int inPinRed = 7; // red button
-int inPinBlack = 6; // black button
+int inPinRed = 6; // red button
+int inPinBlack = 7; // black button
 int redState; 
 int blackState;
 int val = 0; 
@@ -15,12 +15,40 @@ int green = 9;
 int pinArray[] = {12, 11, 10, 9, 8}; // pin address array
 int count = 0;
 int sampleValue[5]; // sample array value
+int redLED = 5;
+int yellowLED = 4;
+int greenLED = 3;
 
 int trialNumber;
 int objectNumber;
 String objectName;
 String sensorName;
 int learnedValue[10][5];
+
+int IRsum = 0;
+int REDsum = 0;
+int YELLOWsum = 0;
+int GREENsum = 0;
+int BLUEsum = 0;
+
+int objectMean[5];
+
+///////////////Object Database///////////////////////////////
+int blueMetalCan[] = {455, 82, 9, 170, 276}; 
+int cardboardInsomnia[] = {725, 251, 7, 195, 192};
+int clearFredWater[] = {187, 176, 52, 254, 293}; 
+int clearPlasticCup[] = {234, 225, 47, 232, 270};
+int greenSierraMistCan[] = {450, 140, 9, 277, 194};
+int newspaper[] = {624, 284, 7, 235, 319};
+int plasticBag[] = {248, 149, 7, 164, 144};
+int redCokeCan[] = {467, 349, 10, 224, 294};
+int redSoloCup[] = {708, 400, 18, 169, 157};
+int apple[] = {576, 195, 21, 169, 143};
+/////////////////////////////////////////////////////////////
+
+int* DataMatx[10] = {blueMetalCan, cardboardInsomnia, clearFredWater, clearPlasticCup, greenSierraMistCan, newspaper, plasticBag, redCokeCan, redSoloCup, apple};
+char* DataNames[10] = {"blueMetalCan", "cardboardInsomnia", "clearFredWater", "clearPlasticCup", "greenSierraMistCan", "newspaper", "plasticBag", "redCokeCan", "redSoloCup", "apple"};
+
 
 void setup() {
   Serial.begin(19200);
@@ -31,6 +59,9 @@ void setup() {
   pinMode(ir, OUTPUT);
   pinMode(blue, OUTPUT);
   pinMode(green, OUTPUT);
+  pinMode(redLED, OUTPUT);
+  pinMode(yellowLED, OUTPUT);
+  pinMode(greenLED, OUTPUT);
   for (count=0;count<5;count++)
     pinMode(pinArray[count], OUTPUT);
 }
@@ -55,40 +86,65 @@ void loop() {
   Serial.print('\n');
   Serial.print("========== Learn Mode ==========");
   Serial.print('\n');
-  //Serial.println("Sensor Name: ");
-  //while (Serial.available()==0) {
-  //}  
-  //sensorName = Serial.readString();
   Serial.println("Object Type: ");
   while (Serial.available()==0){
   }
   objectName = Serial.readString();
   
-  
-  
   for (trialNumber=0;trialNumber<10;trialNumber++) {   //trials 0 to 9
     for (count=0;count<5;count++) {
       digitalWrite(pinArray[count], HIGH); //turn the LEDs on sequentially
-      delay(25); //wait for stabilization
-      sensorValue = analogRead(analogPin); //read the value from the sensor
+      delay(100); //wait for stabilization
+      sensorValue = analogRead(analogPin); //record the value from the sensor
       learnedValue[trialNumber][count] = sensorValue;
       delay(20);
       digitalWrite(pinArray[count], LOW); //turn LED off
       delay(100);
      }
+       IRsum = IRsum + learnedValue[trialNumber][0];
+       REDsum = REDsum + learnedValue[trialNumber][1];
+       YELLOWsum = YELLOWsum + learnedValue[trialNumber][2];
+       GREENsum = GREENsum + learnedValue[trialNumber][3];
+       BLUEsum = BLUEsum + learnedValue[trialNumber][4];
   } 
+    
+      objectMean[0] = (IRsum / 10);
+      objectMean[1] = (REDsum / 10);
+      objectMean[2] = (YELLOWsum / 10);
+      objectMean[3] = (GREENsum / 10);
+      objectMean[4] = (BLUEsum / 10);
+   
+       ///////Print the Data to Serial Monitor////////////////////
     Serial.print('\n');
     Serial.print(objectName);
-    Serial.print(sensorName);
-    
+//    Serial.print(sensorName);
     for (trialNumber=0;trialNumber<10;trialNumber++) {
       Serial.print('\n');
       for (count=0;count<5;count++) {
-    Serial.print(learnedValue[trialNumber][count]);
-    Serial.print(" ");
+        Serial.print(learnedValue[trialNumber][count]);
+        Serial.print(" ");
     } }
-    
-    
+     Serial.print('\n');
+     Serial.print('\n');
+     Serial.print("Mean Vector:");
+     Serial.print('\n');
+     Serial.print(objectMean[0]); 
+     Serial.print(" "); 
+     Serial.print(objectMean[1]); 
+     Serial.print(" "); 
+     Serial.print(objectMean[2]); 
+     Serial.print(" "); 
+     Serial.print(objectMean[3]); 
+     Serial.print(" "); 
+     Serial.print(objectMean[4]);
+    ///////////////////////////////////////////////////////////
+  
+    IRsum = 0;
+    REDsum = 0;
+    YELLOWsum = 0;
+    GREENsum = 0;
+    BLUEsum = 0;
+  
   for (;;) {
       redState = digitalRead(inPinRed);
       blackState = digitalRead(inPinBlack);
@@ -100,8 +156,10 @@ void loop() {
   
   Identify: 
   // identify subroutine
-  
+  Serial.print('\n');
+  Serial.print('\n');
   Serial.print("========== Identify Mode ==========");
+  Serial.print('\n');
   delay(500);
  
   for (count=0;count<5;count++) { //load the matrix with 5 color values
@@ -114,12 +172,12 @@ void loop() {
 
   double smallestDistance = 1000000.0;
   int smallestIndex = -1;
-  for (count = 0; count < 10; count++) {  // Number of learned objects
-    int dim0 = sampleValue[0] - learnedValue[count][0];
-    int dim1 = sampleValue[1] - learnedValue[count][1];
-    int dim2 = sampleValue[2] - learnedValue[count][2];
-    int dim3 = sampleValue[3] - learnedValue[count][3];
-    int dim4 = sampleValue[4] - learnedValue[count][4];
+  for (count = 0; count < 9; count++) {  // Number of learned objects
+    int dim0 = abs(sampleValue[0] - DataMatx[count][0]);
+    int dim1 = abs(sampleValue[1] - DataMatx[count][1]);
+    int dim2 = abs(sampleValue[2] - DataMatx[count][2]);
+    int dim3 = abs(sampleValue[3] - DataMatx[count][3]);
+    int dim4 = abs(sampleValue[4] - DataMatx[count][4]);
     int distSq = dim0 * dim0 + dim1 * dim1 + dim2 * dim2 + dim3 * dim3 + dim4 * dim4;
     double result = sqrt((double)distSq);
     if (result < smallestDistance) {
@@ -127,11 +185,33 @@ void loop() {
       smallestIndex = count;
     }
   }
-  Serial.print("Identified as object ");
-  Serial.println(smallestIndex);
   
+  if (smallestIndex < 6 || smallestIndex == 7 || smallestIndex == 8) {
+     digitalWrite(greenLED, HIGH); //turn on Green LED for RECYCLE
+        Serial.print("Identified as object:  ");
+        Serial.print(DataNames[smallestIndex]);
+     delay(5000);
+     digitalWrite(greenLED, LOW);
+     } 
+  if (smallestIndex == 6) {
+     digitalWrite(redLED, HIGH); //turn on Red LED for LANDFILL
+         Serial.print("Identified as object:  ");
+         Serial.print(DataNames[smallestIndex]); 
+     delay(5000);
+     digitalWrite(redLED, LOW);
+     }  
+  if (smallestIndex == 9) {
+     digitalWrite(yellowLED, HIGH); //turn on Yellow LED for COMPOST
+         Serial.print("Identified as object:  ");
+         Serial.print(DataNames[smallestIndex]);
+     delay(5000);
+     digitalWrite(yellowLED, LOW);
+     }
+     
+//   Serial.print("Identified as object:  ");
+//   Serial.print(DataNames[smallestIndex]);
   
-  for (;;) {
+   for (;;) {
     redState = digitalRead(inPinRed);
     blackState = digitalRead(inPinBlack);
     if (redState == HIGH) {
@@ -139,6 +219,6 @@ void loop() {
     }
     if (blackState == HIGH) {
       goto Learn;
-    }
+     }
   }
 }
